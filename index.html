@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Water Atlas — Freshwater quality at a glance</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="intro">
+        <div class="eyebrow"><span class="dot"></span> WATER ATLAS / LIVE EXPLORER</div>
+        <h1>How healthy is the<br /><em>water</em> around you?</h1>
+        <p class="lede">Drag the map and click anywhere to reveal the latest available freshwater quality assessment.</p>
+        <div class="source-pill"><span>◎</span> Based on European Environment Agency data</div>
+        <div class="instruction"><span class="mouse-icon">⌖</span><span><strong>Click the map</strong><br />to inspect a region</span></div>
+      </section>
+      <section class="map-card">
+        <div id="map" aria-label="Interactive world map"></div>
+        <div class="map-topbar"><div class="map-label"><span class="pulse"></span> Freshwater status</div><div class="map-hint">PAN · ZOOM · SELECT</div></div>
+        <div class="legend"><div class="legend-title">QUALITY STATUS</div><div class="legend-row"><span class="key excellent"></span>Excellent</div><div class="legend-row"><span class="key good"></span>Good</div><div class="legend-row"><span class="key moderate"></span>Moderate</div><div class="legend-row"><span class="key poor"></span>Poor</div></div>
+        <div id="result" class="result-card" aria-live="polite"><button id="close" aria-label="Close">×</button><div class="result-kicker">SELECT A LOCATION</div><h2>Explore the map</h2><p>Click a region to see its freshwater quality.</p></div>
+      </section>
+    </main>
+    <footer><span>WATER ATLAS</span><span>WISE WFD · live public layer</span><a href="https://discomap.eea.europa.eu/wise-freshwaterviewer/?page=Page&views=Introduction" target="_blank" rel="noreferrer">View source ↗</a></footer>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="data/water-bodies.js"></script><script src="app.js"></script>
+  </body>
+</html>
