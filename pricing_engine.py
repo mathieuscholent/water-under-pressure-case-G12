@@ -134,6 +134,24 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
     treatment_contribution = treatment_cost(treatment_intensity, config)
     unclamped += treatment_contribution
     final_price = min(ceiling, max(floor, unclamped))
+    scarcity_adjustment = base * (factors["scarcity"] - 1)
+    consumption_adjustment = base * factors["scarcity"] * (factors["consumption"] - 1)
+    pollution_adjustment = (base * factors["scarcity"] * factors["consumption"]
+                            * (factors["pollution"] - 1))
+    clamp = "floor" if unclamped < floor else "ceiling" if unclamped > ceiling else None
+    explanation_lines = [
+        f"Base price: €{base:.2f}/m³",
+        f"Scarcity adjustment: +€{scarcity_adjustment:.2f}/m³",
+        f"Treatment requirement: +€{treatment_contribution:.2f}/m³",
+        f"Consumption adjustment: +€{consumption_adjustment:.2f}/m³",
+        f"Pollution adjustment: +€{pollution_adjustment:.2f}/m³",
+        f"Price before constraints: €{unclamped:.2f}/m³",
+    ]
+    if clamp == "floor":
+        explanation_lines.append(f"Applied floor: €{floor:.2f}/m³")
+    elif clamp == "ceiling":
+        explanation_lines.append(f"Applied ceiling: €{ceiling:.2f}/m³")
+    explanation_lines.append(f"Final price: €{final_price:.2f}/m³")
     return {
         "price_per_m3": final_price,
         "unclamped_price_per_m3": unclamped,
@@ -146,10 +164,9 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
             "treatment_cost_per_intensity_m3": config.treatment_cost_per_intensity_m3,
             "treatment_contribution_per_m3": treatment_contribution,
         },
-        "explanation": (
-            f"Treatment requirement contributed +€{treatment_contribution:.2f}/m³ to this scenario."
-        ),
-        "clamp": "floor" if unclamped < floor else "ceiling" if unclamped > ceiling else None,
+        "explanation": " ".join(explanation_lines),
+        "explanation_lines": explanation_lines,
+        "clamp": clamp,
     }
 
 
