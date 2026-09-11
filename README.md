@@ -52,6 +52,19 @@ These questions aren't here to slow you down — they're part of what's being ev
 
 The pricing engine is exposed as a Vercel serverless function at `/api/`.
 Deploy from the repository root with the Vercel CLI or by importing the repository into Vercel. A `GET /api/` health check returns service status; send pricing inputs as JSON to `POST /api/`. Optional multiplier assumptions can be supplied in a `config` object, matching `PricingConfig` in `pricing_engine.py`.
+# Water pricing engine
+
+The MVP treats water quality as a treatment requirement, not as a direct
+proxy for price. Callers provide `treatment_intensity_score` from 0 (no
+additional treatment) to 1 (highest treatment requirement for the intended
+use). The calculation is deliberately transparent:
+
+`price = clamp(base × scarcity × consumption × pollution + treatment_intensity_score × treatment_cost_per_intensity_m3)`
+
+`treatment_cost_per_intensity_m3` is configurable in `PricingConfig` (default
+€0.40/m³ at intensity 1). Results include the numeric contribution and the
+display-ready explanation: “Treatment requirement contributed +€X/m³ to this
+scenario.” This is a prototype score, not an engineering estimate.
 
 ## Public scarcity data
 
