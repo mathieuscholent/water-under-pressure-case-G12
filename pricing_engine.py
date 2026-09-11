@@ -16,6 +16,42 @@ class PricingConfig:
     consumption_reference_m3: float = 200.0
 
 
+def reset_to_defaults() -> PricingConfig:
+    """Return a fresh default configuration for a UI reset action."""
+    return PricingConfig()
+
+
+def model_assumptions(inputs: Mapping[str, Any] | None = None,
+                      config: PricingConfig | None = None) -> dict[str, Any]:
+    """Return a UI-ready, explicitly classified explanation of pricing inputs."""
+    inputs = inputs or {}
+    config = config or PricingConfig()
+    return {
+        "title": "Model assumptions",
+        "sections": [
+            {"name": "REAL DATA", "items": [
+                {"name": "scarcity_score", "value": inputs.get("scarcity_score"),
+                 "source": "European Environment Agency WEI+ country CSV; prototype normalization shown below"},
+            ]},
+            {"name": "USER INPUT", "items": [
+                {"name": name, "value": inputs.get(name), "source": "Entered by the user"}
+                for name in ("annual_consumption_m3", "treatment_intensity_score", "pollution_score")
+                if name in inputs
+            ]},
+            {"name": "MODEL ASSUMPTION", "items": [
+                {"name": "base prices", "value": {"household": inputs.get("base_household_price"), "company": inputs.get("base_company_price")}, "source": "Configured tariff assumption"},
+                {"name": "scarcity multiplier", "value": f"1 + {config.scarcity_multiplier_coefficient} × scarcity_score", "source": "Pricing model assumption"},
+                {"name": "treatment multiplier", "value": f"treatment_intensity_score × €{config.treatment_cost_per_intensity_m3:.2f}/m³ (additive)", "source": "Pricing model assumption"},
+                {"name": "consumption multiplier", "value": f"1 + {config.consumption_multiplier_coefficient} × min(consumption / {config.consumption_reference_m3} m³, 1)", "source": "Pricing model assumption"},
+                {"name": "pollution surcharge", "value": f"1 + {config.pollution_multiplier_coefficient} × pollution_score (companies only)", "source": "Pricing model assumption"},
+                {"name": "floors", "value": {"household": inputs.get("household_price_floor"), "company": inputs.get("company_price_floor")}, "source": "Configured tariff assumption"},
+                {"name": "ceilings", "value": {"household": inputs.get("household_price_ceiling"), "company": inputs.get("company_price_ceiling")}, "source": "Configured tariff assumption"},
+                {"name": "optimization priorities", "value": ["move company prices first", "preserve pollution ordering", "move household price last"], "source": "Optimization model assumption"},
+            ]},
+        ],
+    }
+
+
 EEA_WEI_CSV_URL = "https://www.eea.europa.eu/en/analysis/maps-and-charts/water-exploitation-index-plus-chart_2/@@download/file"
 
 
