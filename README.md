@@ -1,12 +1,4 @@
-# Water Under Pressure — ATELIA × ESCP Starter Kit
-
-> This repo is your starting point. Codex should read this README first.
-
-## How to Get Started
-
-This repo is a **template**: click **Fork** (top right), not "Use this template." Fork keeps your copy linked back to the original — that's what lets ATELIA automatically find every team's work, without anyone needing to send a link.
-
-Once you've forked it, add your teammates as collaborators (Settings → Collaborators on your fork), and leave the visibility as **Public** — don't switch it to Private, or we lose access to your work.
+# Water Under Pressure — ATELIA × ESCP
 
 ## The Brief
 
