@@ -7,7 +7,7 @@ from typing import Any, Mapping
 @dataclass(frozen=True)
 class PricingConfig:
     scarcity_multiplier_coefficient: float = 0.50
-    quality_multiplier_coefficient: float = 0.40
+    treatment_cost_per_intensity_m3: float = 0.40
     pollution_multiplier_coefficient: float = 0.60
     consumption_multiplier_coefficient: float = 0.20
     consumption_reference_m3: float = 200.0
@@ -29,9 +29,9 @@ def scarcity_multiplier(score: float, config: PricingConfig) -> float:
     return 1 + config.scarcity_multiplier_coefficient * _unit_interval(score, "scarcity_score")
 
 
-def quality_multiplier(score: float, config: PricingConfig) -> float:
-    # A low quality score means more treatment is required.
-    return 1 + config.quality_multiplier_coefficient * (1 - _unit_interval(score, "water_quality_score"))
+def treatment_cost(intensity: float, config: PricingConfig) -> float:
+    """Return the additive treatment cost for a 0–1 treatment requirement score."""
+    return _unit_interval(intensity, "treatment_intensity_score") * config.treatment_cost_per_intensity_m3
 
 
 def pollution_multiplier(score: float, config: PricingConfig) -> float:
@@ -54,7 +54,11 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
 
     consumption = _nonnegative(inputs.get("annual_consumption_m3"), "annual_consumption_m3")
     scarcity = _unit_interval(inputs.get("scarcity_score"), "scarcity_score")
-    quality = _unit_interval(inputs.get("water_quality_score"), "water_quality_score")
+    treatment_intensity = _unit_interval(
+        inputs.get("treatment_intensity_score"), "treatment_intensity_score"
+    )
+    if "water_quality_score" in inputs:
+        raise ValueError("use treatment_intensity_score instead of water_quality_score")
     pollution = inputs.get("pollution_score", 0)
     if user_type == "company":
         pollution = _unit_interval(pollution, "pollution_score")
@@ -71,26 +75,38 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
         raise ValueError(f"{floor_key} cannot exceed {ceiling_key}")
     if config.consumption_reference_m3 <= 0:
         raise ValueError("consumption_reference_m3 must be positive")
-    coefficients = (config.scarcity_multiplier_coefficient, config.quality_multiplier_coefficient,
-                    config.pollution_multiplier_coefficient, config.consumption_multiplier_coefficient)
+    coefficients = (config.scarcity_multiplier_coefficient,
+                    config.pollution_multiplier_coefficient,
+                    config.consumption_multiplier_coefficient,
+                    config.treatment_cost_per_intensity_m3)
     if any(value < 0 for value in coefficients):
-        raise ValueError("multiplier coefficients must be non-negative")
+        raise ValueError("pricing coefficients must be non-negative")
 
     factors = {
         "scarcity": scarcity_multiplier(scarcity, config),
-        "water_quality": quality_multiplier(quality, config),
         "consumption": consumption_multiplier(consumption, config),
         "pollution": pollution_multiplier(pollution, config) if user_type == "company" else 1.0,
     }
     unclamped = base
     for factor in factors.values():
         unclamped *= factor
+    treatment_contribution = treatment_cost(treatment_intensity, config)
+    unclamped += treatment_contribution
     final_price = min(ceiling, max(floor, unclamped))
     return {
         "price_per_m3": final_price,
         "unclamped_price_per_m3": unclamped,
         "floor": floor,
         "ceiling": ceiling,
-        "decomposition": {"base_price": base, "multipliers": factors},
+        "decomposition": {
+            "base_price": base,
+            "multipliers": factors,
+            "treatment_intensity_score": treatment_intensity,
+            "treatment_cost_per_intensity_m3": config.treatment_cost_per_intensity_m3,
+            "treatment_contribution_per_m3": treatment_contribution,
+        },
+        "explanation": (
+            f"Treatment requirement contributed +€{treatment_contribution:.2f}/m³ to this scenario."
+        ),
         "clamp": "floor" if unclamped < floor else "ceiling" if unclamped > ceiling else None,
     }
