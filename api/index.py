@@ -3,7 +3,8 @@
 import json
 from http.server import BaseHTTPRequestHandler
 
-from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, compare_scenarios, fetch_eea_scarcity
+from pricing_engine import (PricingConfig, calculate_price, optimize_revenue_target,
+                            compare_scenarios, fetch_eea_scarcity, model_assumptions)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -31,6 +32,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         from urllib.parse import parse_qs, urlparse
         query = parse_qs(urlparse(self.path).query)
+        if query.get("mode") == ["assumptions"]:
+            self._send(200, model_assumptions())
+            return
         if "geography" in query:
             try:
                 year = int(query["year"][0]) if "year" in query else None
