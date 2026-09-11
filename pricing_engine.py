@@ -214,3 +214,65 @@ def optimize_revenue_target(inputs: Mapping[str, Any], config: PricingConfig | N
                           "recommended_household_price": h["price_per_m3"],
                           "company_recommendations": [{"name": c["name"], "recommended_price_per_m3": c["recommended_price"],
                                                        "final_price_per_m3": c["price"], "pollution_score": c["pollution_score"]} for c in company_results]}}
+
+
+def compare_scenarios(inputs: Mapping[str, Any], config: PricingConfig | None = None) -> dict[str, Any]:
+    """Return side-by-side pricing, revenue, constraints, and chart data.
+
+    ``household`` and ``company`` describe representative users. Each scenario
+    may override any pricing input, especially ``scarcity_score`` and label.
+    """
+    config = config or PricingConfig()
+    scenarios = inputs.get("scenarios")
+    if not isinstance(scenarios, list) or len(scenarios) < 3:
+        raise ValueError("scenarios must contain at least three scenarios")
+    household = dict(inputs.get("household", {}))
+    company = dict(inputs.get("company", {}))
+    target = _nonnegative(inputs.get("desired_total_annual_revenue", 0), "desired_total_annual_revenue")
+
+    def demand(item, name):
+        return _nonnegative(item.get("annual_consumption_m3"), f"{name}.annual_consumption_m3") * _nonnegative(item.get("user_count", 1), f"{name}.user_count")
+
+    household_demand, company_demand = demand(household, "household"), demand(company, "company")
+    results = []
+    for index, scenario in enumerate(scenarios):
+        if not isinstance(scenario, Mapping):
+            raise ValueError(f"scenarios[{index}] must be an object")
+        h_input = {**household, **scenario, "user_type": "household"}
+        c_input = {**company, **scenario, "user_type": "company"}
+        h = calculate_price(h_input, config)
+        c = calculate_price(c_input, config)
+        pollution = _unit_interval(c_input.get("pollution_score", 0), "pollution_score")
+        c_without_pollution = calculate_price({**c_input, "pollution_score": 0}, config)["price_per_m3"]
+        revenue = h["price_per_m3"] * household_demand + c["price_per_m3"] * company_demand
+        constraints = []
+        if h["clamp"]:
+            constraints.append(f"household_{h['clamp']}")
+        if c["clamp"]:
+            constraints.append(f"company_{c['clamp']}")
+        if target and abs(revenue - target) < 1e-6:
+            constraints.append("revenue_target")
+        elif target and revenue < target:
+            constraints.append("revenue_target_unmet")
+        results.append({"name": scenario.get("name", f"Scenario {index + 1}"),
+                        "scarcity_score": h_input["scarcity_score"],
+                        "household_price_per_m3": h["price_per_m3"],
+                        "company_price_per_m3": c["price_per_m3"],
+                        "pollution_surcharge_per_m3": c["price_per_m3"] - c_without_pollution,
+                        "expected_household_bill": h["price_per_m3"] * household_demand,
+                        "expected_company_bill": c["price_per_m3"] * company_demand,
+                        "total_utility_revenue": revenue,
+                        "revenue_gap_vs_target": revenue - target if target else None,
+                        "binding_constraints": constraints})
+
+    chart = []
+    for step in range(21):
+        scarcity = step / 20
+        h = calculate_price({**household, "user_type": "household", "scarcity_score": scarcity}, config)
+        c = calculate_price({**company, "user_type": "company", "scarcity_score": scarcity}, config)
+        chart.append({"scarcity_score": scarcity, "household_price_per_m3": h["price_per_m3"],
+                      "company_price_per_m3": c["price_per_m3"],
+                      "total_utility_revenue": h["price_per_m3"] * household_demand + c["price_per_m3"] * company_demand})
+    return {"scenarios": results, "charts": {"scarcity_curve": chart},
+            "chart_metadata": {"x": "scarcity_score", "series": ["household_price_per_m3", "company_price_per_m3", "total_utility_revenue"]},
+            "target_revenue": target}

@@ -1,6 +1,6 @@
 import unittest
 
-from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, wei_to_scarcity_score
+from pricing_engine import PricingConfig, calculate_price, compare_scenarios, optimize_revenue_target, wei_to_scarcity_score
 
 
 BASE = {
@@ -67,6 +67,26 @@ class PricingEngineTests(unittest.TestCase):
     def test_wei_normalization_is_separate_from_raw_value(self):
         self.assertEqual(wei_to_scarcity_score(20), 0.5)
         self.assertEqual(wei_to_scarcity_score(55), 1.0)
+
+    def test_scenario_comparison_has_metrics_constraints_and_chart(self):
+        common = {**BASE, "annual_consumption_m3": 100}
+        result = compare_scenarios({"desired_total_annual_revenue": 5000,
+            "household": {**common, "user_count": 2},
+            "company": {**common, "user_type": "company", "user_count": 1, "pollution_score": 1},
+            "scenarios": [{"name": "Normal year", "scarcity_score": 0.2},
+                          {"name": "Dry year", "scarcity_score": 0.6},
+                          {"name": "Severe drought", "scarcity_score": 0.9}]})
+        self.assertEqual([s["name"] for s in result["scenarios"]], ["Normal year", "Dry year", "Severe drought"])
+        self.assertIn("pollution_surcharge_per_m3", result["scenarios"][0])
+        self.assertIn("revenue_target_unmet", result["scenarios"][0]["binding_constraints"])
+        self.assertEqual(len(result["charts"]["scarcity_curve"]), 21)
+        self.assertEqual(result["charts"]["scarcity_curve"][0]["scarcity_score"], 0)
+        self.assertEqual(result["charts"]["scarcity_curve"][-1]["scarcity_score"], 1)
+        self.assertGreater(result["scenarios"][-1]["household_price_per_m3"], result["scenarios"][0]["household_price_per_m3"])
+
+    def test_scenario_comparison_requires_three_scenarios(self):
+        with self.assertRaises(ValueError):
+            compare_scenarios({"household": BASE, "company": BASE, "scenarios": [{"scarcity_score": 0}]})
 
 
 if __name__ == "__main__":
