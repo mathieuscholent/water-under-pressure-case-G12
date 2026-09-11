@@ -1,6 +1,6 @@
 import unittest
 
-from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target
+from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, wei_to_scarcity_score
 
 
 BASE = {
@@ -54,6 +54,10 @@ class PricingEngineTests(unittest.TestCase):
         result = optimize_revenue_target({"desired_total_annual_revenue": 99999,
             "household": {**BASE, "user_count": 1}, "companies": [{**BASE, "user_count": 1}]})
         self.assertFalse(result["target_feasible"])
+
+    def test_wei_normalization_is_separate_from_raw_value(self):
+        self.assertEqual(wei_to_scarcity_score(20), 0.5)
+        self.assertEqual(wei_to_scarcity_score(55), 1.0)
 
 
 if __name__ == "__main__":

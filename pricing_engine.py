@@ -2,6 +2,9 @@
 
 from dataclasses import dataclass, asdict
 from typing import Any, Mapping
+import csv
+import io
+from urllib.request import urlopen
 
 
 @dataclass(frozen=True)
@@ -11,6 +14,44 @@ class PricingConfig:
     pollution_multiplier_coefficient: float = 0.60
     consumption_multiplier_coefficient: float = 0.20
     consumption_reference_m3: float = 200.0
+
+
+EEA_WEI_CSV_URL = "https://www.eea.europa.eu/en/analysis/maps-and-charts/water-exploitation-index-plus-chart_2/@@download/file"
+
+
+def wei_to_scarcity_score(raw_percent: Any) -> float:
+    """Prototype-only normalization: 0% WEI+ => 0, 40%+ => 1."""
+    value = _nonnegative(raw_percent, "wei_plus_percent")
+    return min(value, 40.0) / 40.0
+
+
+def fetch_eea_scarcity(geography: str, year: int | None = None, timeout: int = 15) -> dict[str, Any]:
+    """Retrieve the EEA's country WEI+ CSV and return raw plus separately-derived data."""
+    if not isinstance(geography, str) or not geography.strip():
+        raise ValueError("geography must be a non-empty country name or code")
+    with urlopen(EEA_WEI_CSV_URL, timeout=timeout) as response:
+        rows = list(csv.DictReader(io.TextIOWrapper(response, encoding="utf-8-sig")))
+    if not rows:
+        raise ValueError("EEA WEI+ download returned no rows")
+    def find(row, words):
+        return next((value for key, value in row.items() if any(word in key.lower() for word in words)), "")
+    matches = [row for row in rows if geography.casefold() in find(row, ("country", "geo", "name", "code")).casefold()]
+    if year is not None:
+        matches = [row for row in matches if str(year) in find(row, ("year", "time", "period"))]
+    if not matches:
+        raise ValueError(f"No EEA WEI+ value found for geography '{geography}'")
+    row = matches[-1]
+    raw_text = find(row, ("wei", "value", "percent", "%"))
+    try:
+        raw = float(raw_text.replace(",", ".").replace("%", "").strip())
+    except (AttributeError, ValueError) as error:
+        raise ValueError("EEA WEI+ value was not numeric") from error
+    return {"geography": geography, "raw_public_data_value": raw,
+            "raw_unit": "percent", "source": "European Environment Agency WEI+ country CSV",
+            "source_url": EEA_WEI_CSV_URL, "date_year": find(row, ("year", "time", "period")) or "1990–2017",
+            "transformation": "prototype normalization: min(max(raw WEI+ %, 0), 40) / 40",
+            "scarcity_score": wei_to_scarcity_score(raw),
+            "official_metric_disclaimer": "The 0–1 score is calculated by this prototype; it is not an official EEA or EU metric."}
 
 
 def _unit_interval(value: Any, name: str) -> float:
