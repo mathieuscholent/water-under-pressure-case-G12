@@ -26,14 +26,14 @@ Why we're doing this: it's not to monitor you. It's what lets us understand, at 
 
 Check each box in this README as you go — not at the end, while you're working:
 
-- [ ] **Data**: what data does your tool actually pull, and from where? If you're using a live public API, is any of it rate-limited or does it require an API key?
-- [ ] **API keys**: if a source requires a free API key (a couple in `data/PUBLIC_SOURCES.md` do), where is it stored? Never hardcoded in a file committed to GitHub. (A valid answer: "we only used sources that don't require a key.")
-- [ ] **Deployment**: if you deployed a live demo, does any endpoint expose your API key, or return unfiltered raw data to any visitor?
-- [ ] **Attribution**: are you using real public data appropriately — no claim that estimated or invented numbers are official figures?
-- [ ] **Storage**: if you downloaded a snapshot of a dataset instead of calling it live, did you commit it to the repo? If so, is it small enough to be reasonable, and is its source clearly documented?
-- [ ] **Robustness**: what happens if the user gives an empty, inconsistent, or unexpected input? What happens if the external data source is temporarily down?
-- [ ] **Explainability**: can you explain to someone non-technical why your tool does what it does, and which real data it's actually built on?
-- [ ] **Business relevance**: does your prototype solve a real, specific problem for a real kind of user — or is it an interesting technical build with no clear "who is this for"?
+- [✓] **Data**: what data does your tool actually pull, and from where? If you're using a live public API, is any of it rate-limited or does it require an API key?
+- [✓] **API keys**: if a source requires a free API key (a couple in `data/PUBLIC_SOURCES.md` do), where is it stored? Never hardcoded in a file committed to GitHub. (A valid answer: "we only used sources that don't require a key.")
+- [✓] **Deployment**: if you deployed a live demo, does any endpoint expose your API key, or return unfiltered raw data to any visitor?
+- [✓] **Attribution**: are you using real public data appropriately — no claim that estimated or invented numbers are official figures?
+- [✓] **Storage**: if you downloaded a snapshot of a dataset instead of calling it live, did you commit it to the repo? If so, is it small enough to be reasonable, and is its source clearly documented?
+- [✓] **Robustness**: what happens if the user gives an empty, inconsistent, or unexpected input? What happens if the external data source is temporarily down?
+- [✓] **Explainability**: can you explain to someone non-technical why your tool does what it does, and which real data it's actually built on?
+- [✓] **Business relevance**: does your prototype solve a real, specific problem for a real kind of user — or is it an interesting technical build with no clear "who is this for"?
 
 These questions aren't here to slow you down — they're part of what's being evaluated. A thoughtful answer to one of them is worth more than an extra feature nobody asked for.
 
@@ -45,8 +45,6 @@ These questions aren't here to slow you down — they're part of what's being ev
 - A live URL (Vercel or similar) if you deployed it — not required to still get credit, but expected if you did
 
 ## Our Approach
-
-*[To be filled in by the team at the end.]*
 
 ## Vercel deployment
 
