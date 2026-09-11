@@ -52,3 +52,9 @@ These questions aren't here to slow you down — they're part of what's being ev
 
 The pricing engine is exposed as a Vercel serverless function at `/api/`.
 Deploy from the repository root with the Vercel CLI or by importing the repository into Vercel. A `GET /api/` health check returns service status; send pricing inputs as JSON to `POST /api/`. Optional multiplier assumptions can be supplied in a `config` object, matching `PricingConfig` in `pricing_engine.py`.
+
+## Public scarcity data
+
+`GET /api/?geography=Germany` retrieves the EEA country-level WEI+ CSV. The response keeps the raw WEI+ percentage, source, year, and transformation visible alongside the prototype's separately calculated scarcity score. The score is `min(max(raw WEI+ %, 0), 40) / 40`; this is a prototype normalization, not an official EEA or EU metric. The API returns a clear error when the selected geography is unavailable.
+
+The EEA WEI+ country series was selected because it is a direct, no-auth download with annual country values. The European Drought Observatory remains useful for current drought monitoring, but its indicator layers require more spatial and temporal processing than this prototype needs.
