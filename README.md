@@ -52,6 +52,19 @@ These questions aren't here to slow you down — they're part of what's being ev
 
 The pricing engine is exposed as a Vercel serverless function at `/api/`.
 Deploy from the repository root with the Vercel CLI or by importing the repository into Vercel. A `GET /api/` health check returns service status; send pricing inputs as JSON to `POST /api/`. Optional multiplier assumptions can be supplied in a `config` object, matching `PricingConfig` in `pricing_engine.py`.
+
+## Scenario comparison
+
+Send `mode: "scenario_comparison"` to `POST /api/` with representative
+`household` and `company` inputs plus at least three `scenarios`. A scenario
+overrides shared inputs such as `name` and `scarcity_score`. The response
+contains side-by-side household/company prices, pollution surcharge per m³,
+expected bills, total revenue, revenue gap versus the optional
+`desired_total_annual_revenue`, and `binding_constraints` (price floors,
+ceilings, or revenue-target status).
+
+The `charts.scarcity_curve` response contains 21 points from scarcity 0 to 1
+for plotting household price, company price, and total utility revenue.
 # Water pricing engine
 
 The MVP treats water quality as a treatment requirement, not as a direct

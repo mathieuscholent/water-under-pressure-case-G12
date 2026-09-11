@@ -3,7 +3,7 @@
 import json
 from http.server import BaseHTTPRequestHandler
 
-from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, fetch_eea_scarcity
+from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, compare_scenarios, fetch_eea_scarcity
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -20,8 +20,10 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             inputs = json.loads(self.rfile.read(length))
             config_values = inputs.pop("config", {})
-            result = (optimize_revenue_target(inputs, PricingConfig(**config_values))
-                      if inputs.get("mode") == "revenue_target" else calculate_price(inputs, PricingConfig(**config_values)))
+            config = PricingConfig(**config_values)
+            result = (optimize_revenue_target(inputs, config) if inputs.get("mode") == "revenue_target"
+                      else compare_scenarios(inputs, config) if inputs.get("mode") == "scenario_comparison"
+                      else calculate_price(inputs, config))
             self._send(200, result)
         except (json.JSONDecodeError, TypeError, ValueError) as error:
             self._send(400, {"error": str(error)})
