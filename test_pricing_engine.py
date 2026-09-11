@@ -1,6 +1,7 @@
 import unittest
 
-from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, wei_to_scarcity_score
+from pricing_engine import (PricingConfig, calculate_price, optimize_revenue_target,
+                             pollution_surcharge, wei_to_scarcity_score)
 
 
 BASE = {
@@ -29,7 +30,20 @@ class PricingEngineTests(unittest.TestCase):
 
     def test_households_never_get_pollution_multiplier(self):
         result = self.price(pollution_score=1)
-        self.assertEqual(result["decomposition"]["multipliers"]["pollution"], 1.0)
+        self.assertEqual(result["decomposition"]["pollution_surcharge_per_m3"], 0.0)
+
+    def test_pollution_surcharge_is_separate_and_monotonic(self):
+        clean = self.price("company", pollution_score=0)
+        dirty = self.price("company", pollution_score=1)
+        self.assertEqual(clean["decomposition"]["pollution_surcharge_per_m3"], 0.0)
+        self.assertGreater(dirty["decomposition"]["pollution_surcharge_per_m3"], 0.0)
+        self.assertGreater(dirty["price_per_m3"], clean["price_per_m3"])
+        self.assertEqual(pollution_surcharge(0, 5, PricingConfig()), 0.0)
+
+    def test_pollution_surcharge_respects_company_ceiling(self):
+        result = self.price("company", base_company_price=100, pollution_score=1)
+        self.assertEqual(result["price_per_m3"], 20)
+        self.assertEqual(result["clamp"], "ceiling")
 
     def test_treatment_cost_is_transparent_and_additive(self):
         result = self.price(treatment_intensity_score=0.5)

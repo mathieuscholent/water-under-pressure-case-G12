@@ -1,7 +1,7 @@
 """Pure, configurable water-price calculation functions."""
 
 from dataclasses import dataclass, asdict
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 import csv
 import io
 from urllib.request import urlopen
@@ -14,6 +14,19 @@ class PricingConfig:
     pollution_multiplier_coefficient: float = 0.60
     consumption_multiplier_coefficient: float = 0.20
     consumption_reference_m3: float = 200.0
+
+
+class PollutionScoreProvider(Protocol):
+    """Source for the prototype's 0–1 industrial pollution score."""
+
+    def score_for(self, inputs: Mapping[str, Any]) -> float: ...
+
+
+class ManualPollutionScoreProvider:
+    """Temporary input adapter; replaceable with an emissions-portal adapter."""
+
+    def score_for(self, inputs: Mapping[str, Any]) -> float:
+        return _unit_interval(inputs.get("pollution_score", 0), "pollution_score")
 
 
 EEA_WEI_CSV_URL = "https://www.eea.europa.eu/en/analysis/maps-and-charts/water-exploitation-index-plus-chart_2/@@download/file"
@@ -75,8 +88,9 @@ def treatment_cost(intensity: float, config: PricingConfig) -> float:
     return _unit_interval(intensity, "treatment_intensity_score") * config.treatment_cost_per_intensity_m3
 
 
-def pollution_multiplier(score: float, config: PricingConfig) -> float:
-    return 1 + config.pollution_multiplier_coefficient * _unit_interval(score, "pollution_score")
+def pollution_surcharge(score: float, reference_price: float, config: PricingConfig) -> float:
+    """Return the additive, prototype-only industrial pollution surcharge."""
+    return reference_price * config.pollution_multiplier_coefficient * _unit_interval(score, "pollution_score")
 
 
 def consumption_multiplier(annual_consumption_m3: float, config: PricingConfig) -> float:
@@ -86,7 +100,8 @@ def consumption_multiplier(annual_consumption_m3: float, config: PricingConfig) 
     )
 
 
-def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = None) -> dict[str, Any]:
+def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = None,
+                    pollution_provider: PollutionScoreProvider | None = None) -> dict[str, Any]:
     """Calculate one price without side effects; all monetary values are per m3."""
     config = config or PricingConfig()
     user_type = inputs.get("user_type")
@@ -100,7 +115,8 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
     )
     if "water_quality_score" in inputs:
         raise ValueError("use treatment_intensity_score instead of water_quality_score")
-    pollution = inputs.get("pollution_score", 0)
+    pollution_provider = pollution_provider or ManualPollutionScoreProvider()
+    pollution = pollution_provider.score_for(inputs)
     if user_type == "company":
         pollution = _unit_interval(pollution, "pollution_score")
     elif "pollution_score" in inputs:
@@ -126,13 +142,13 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
     factors = {
         "scarcity": scarcity_multiplier(scarcity, config),
         "consumption": consumption_multiplier(consumption, config),
-        "pollution": pollution_multiplier(pollution, config) if user_type == "company" else 1.0,
     }
-    unclamped = base
+    reference_price = base
     for factor in factors.values():
-        unclamped *= factor
+        reference_price *= factor
     treatment_contribution = treatment_cost(treatment_intensity, config)
-    unclamped += treatment_contribution
+    surcharge = pollution_surcharge(pollution, reference_price, config) if user_type == "company" else 0.0
+    unclamped = reference_price + surcharge + treatment_contribution
     final_price = min(ceiling, max(floor, unclamped))
     return {
         "price_per_m3": final_price,
@@ -142,12 +158,15 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
         "decomposition": {
             "base_price": base,
             "multipliers": factors,
+            "pollution_score": pollution if user_type == "company" else None,
+            "pollution_surcharge_per_m3": surcharge,
             "treatment_intensity_score": treatment_intensity,
             "treatment_cost_per_intensity_m3": config.treatment_cost_per_intensity_m3,
             "treatment_contribution_per_m3": treatment_contribution,
         },
         "explanation": (
-            f"Treatment requirement contributed +€{treatment_contribution:.2f}/m³ to this scenario."
+            f"Pollution policy surcharge contributed +€{surcharge:.2f}/m³; "
+            f"treatment requirement contributed +€{treatment_contribution:.2f}/m³."
         ),
         "clamp": "floor" if unclamped < floor else "ceiling" if unclamped > ceiling else None,
     }
