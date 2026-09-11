@@ -65,3 +65,9 @@ use). The calculation is deliberately transparent:
 €0.40/m³ at intensity 1). Results include the numeric contribution and the
 display-ready explanation: “Treatment requirement contributed +€X/m³ to this
 scenario.” This is a prototype score, not an engineering estimate.
+
+## Public scarcity data
+
+`GET /api/?geography=Germany` retrieves the EEA country-level WEI+ CSV. The response keeps the raw WEI+ percentage, source, year, and transformation visible alongside the prototype's separately calculated scarcity score. The score is `min(max(raw WEI+ %, 0), 40) / 40`; this is a prototype normalization, not an official EEA or EU metric. The API returns a clear error when the selected geography is unavailable.
+
+The EEA WEI+ country series was selected because it is a direct, no-auth download with annual country values. The European Drought Observatory remains useful for current drought monitoring, but its indicator layers require more spatial and temporal processing than this prototype needs.

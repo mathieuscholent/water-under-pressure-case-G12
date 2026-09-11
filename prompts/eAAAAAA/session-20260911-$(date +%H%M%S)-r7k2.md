@@ -1,0 +1,41 @@
+### Entry 1 — 2026-09-11
+
+Add an optional revenue-target mode.
+
+The utility provides:
+
+- &#x20;expected household water demand&#x20;
+- &#x20;expected company water demand&#x20;
+- &#x20;number or categories of users&#x20;
+- &#x20;pricing floors and ceilings
+- &#x20;scarcity, quality and pollution information
+- &#x20;desired total annual water revenue
+
+Find prices that get as close as possible to the revenue target while respecting all hard price floors and ceilings.
+
+The optimization should prioritize:
+
+1. &#x20;satisfying hard floors and ceilings;
+2. &#x20;protecting household affordability;
+3. &#x20;reflecting scarcity and water-quality costs;
+4. &#x20;making industrial prices responsive to pollution;
+5. &#x20;reaching the revenue target.&#x20;
+
+Show the trade-off explicitly rather than hiding it inside one unexplained score.
+
+Calculate:
+
+- &#x20;resulting household price
+- &#x20;resulting company price or prices
+- &#x20;expected total revenue
+- &#x20;difference from target revenue
+- &#x20;household share of total revenue
+- &#x20;company share
+- &#x20;average household annual bill
+- &#x20;whether the target is feasible
+
+If multiple solutions reach the revenue target, prefer the one with the lowest household price while maintaining the intended scarcity and pollution incentives.
+
+### Entry 2 — 2026-09-11
+
+eAAAAAA

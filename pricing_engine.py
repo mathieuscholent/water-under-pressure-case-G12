@@ -2,6 +2,9 @@
 
 from dataclasses import dataclass, asdict
 from typing import Any, Mapping
+import csv
+import io
+from urllib.request import urlopen
 
 
 @dataclass(frozen=True)
@@ -11,6 +14,44 @@ class PricingConfig:
     pollution_multiplier_coefficient: float = 0.60
     consumption_multiplier_coefficient: float = 0.20
     consumption_reference_m3: float = 200.0
+
+
+EEA_WEI_CSV_URL = "https://www.eea.europa.eu/en/analysis/maps-and-charts/water-exploitation-index-plus-chart_2/@@download/file"
+
+
+def wei_to_scarcity_score(raw_percent: Any) -> float:
+    """Prototype-only normalization: 0% WEI+ => 0, 40%+ => 1."""
+    value = _nonnegative(raw_percent, "wei_plus_percent")
+    return min(value, 40.0) / 40.0
+
+
+def fetch_eea_scarcity(geography: str, year: int | None = None, timeout: int = 15) -> dict[str, Any]:
+    """Retrieve the EEA's country WEI+ CSV and return raw plus separately-derived data."""
+    if not isinstance(geography, str) or not geography.strip():
+        raise ValueError("geography must be a non-empty country name or code")
+    with urlopen(EEA_WEI_CSV_URL, timeout=timeout) as response:
+        rows = list(csv.DictReader(io.TextIOWrapper(response, encoding="utf-8-sig")))
+    if not rows:
+        raise ValueError("EEA WEI+ download returned no rows")
+    def find(row, words):
+        return next((value for key, value in row.items() if any(word in key.lower() for word in words)), "")
+    matches = [row for row in rows if geography.casefold() in find(row, ("country", "geo", "name", "code")).casefold()]
+    if year is not None:
+        matches = [row for row in matches if str(year) in find(row, ("year", "time", "period"))]
+    if not matches:
+        raise ValueError(f"No EEA WEI+ value found for geography '{geography}'")
+    row = matches[-1]
+    raw_text = find(row, ("wei", "value", "percent", "%"))
+    try:
+        raw = float(raw_text.replace(",", ".").replace("%", "").strip())
+    except (AttributeError, ValueError) as error:
+        raise ValueError("EEA WEI+ value was not numeric") from error
+    return {"geography": geography, "raw_public_data_value": raw,
+            "raw_unit": "percent", "source": "European Environment Agency WEI+ country CSV",
+            "source_url": EEA_WEI_CSV_URL, "date_year": find(row, ("year", "time", "period")) or "1990–2017",
+            "transformation": "prototype normalization: min(max(raw WEI+ %, 0), 40) / 40",
+            "scarcity_score": wei_to_scarcity_score(raw),
+            "official_metric_disclaimer": "The 0–1 score is calculated by this prototype; it is not an official EEA or EU metric."}
 
 
 def _unit_interval(value: Any, name: str) -> float:
@@ -110,3 +151,66 @@ def calculate_price(inputs: Mapping[str, Any], config: PricingConfig | None = No
         ),
         "clamp": "floor" if unclamped < floor else "ceiling" if unclamped > ceiling else None,
     }
+
+
+def optimize_revenue_target(inputs: Mapping[str, Any], config: PricingConfig | None = None) -> dict[str, Any]:
+    """Find bounded prices for one household segment and one or more company segments.
+
+    The result makes the trade-off visible: prices start at the scarcity/quality/
+    pollution-informed recommendation, then revenue is fitted by moving company
+    prices first and the household price last. This protects affordability while
+    retaining the environmental signal wherever the target allows it.
+    """
+    config = config or PricingConfig()
+    target = _nonnegative(inputs.get("desired_total_annual_revenue"), "desired_total_annual_revenue")
+    household = dict(inputs.get("household", {}))
+    household["user_type"] = "household"
+    companies = [dict(item) for item in inputs.get("companies", [])]
+    if not companies:
+        raise ValueError("companies must contain at least one segment")
+    household_demand = _nonnegative(household.get("annual_consumption_m3"), "household.annual_consumption_m3")
+    household_users = _nonnegative(household.get("user_count", 1), "household.user_count")
+    company_results = []
+    for index, company in enumerate(companies):
+        company["user_type"] = "company"
+        result = calculate_price(company, config)
+        demand = _nonnegative(company.get("annual_consumption_m3"), f"companies[{index}].annual_consumption_m3")
+        users = _nonnegative(company.get("user_count", 1), f"companies[{index}].user_count")
+        company_results.append({"name": company.get("name", f"Company {index + 1}"), "input": company,
+                               "demand": demand * users, "price": result["price_per_m3"],
+                               "recommended_price": result["price_per_m3"], "floor": result["floor"],
+                               "ceiling": result["ceiling"], "pollution_score": company.get("pollution_score", 0)})
+    h = calculate_price(household, config)
+    household_price = h["price_per_m3"]
+    household_floor, household_ceiling = h["floor"], h["ceiling"]
+    def revenue(hp: float) -> float:
+        return hp * household_demand * household_users + sum(c["price"] * c["demand"] for c in company_results)
+    initial_revenue = revenue(household_price)
+    # Fit with companies first, preserving pollution ordering and recommended signals.
+    remaining = target - initial_revenue
+    for c in sorted(company_results, key=lambda item: item["pollution_score"], reverse=True):
+        if remaining > 0:
+            change = min(remaining / c["demand"] if c["demand"] else 0, c["ceiling"] - c["price"])
+        else:
+            change = max(remaining / c["demand"] if c["demand"] else 0, c["floor"] - c["price"])
+        c["price"] += change
+        remaining -= change * c["demand"]
+    # Only change household price if bounded company prices cannot meet the target.
+    if abs(remaining) > 1e-9 and household_demand * household_users:
+        household_price = min(household_ceiling, max(household_floor,
+            household_price + remaining / (household_demand * household_users)))
+        remaining = target - revenue(household_price)
+    total = revenue(household_price)
+    household_revenue = household_price * household_demand * household_users
+    return {"household_price_per_m3": household_price,
+            "company_prices": [{"name": c["name"], "price_per_m3": c["price"]} for c in company_results],
+            "expected_total_annual_revenue": total, "target_revenue": target,
+            "difference_from_target": total - target,
+            "household_revenue_share": household_revenue / total if total else 0,
+            "company_revenue_share": (total - household_revenue) / total if total else 0,
+            "average_household_annual_bill": household_price * household_demand,
+            "target_feasible": abs(total - target) < 1e-6,
+            "trade_off": {"starting_revenue": initial_revenue, "household_price_changed": household_price != h["price_per_m3"],
+                          "recommended_household_price": h["price_per_m3"],
+                          "company_recommendations": [{"name": c["name"], "recommended_price_per_m3": c["recommended_price"],
+                                                       "final_price_per_m3": c["price"], "pollution_score": c["pollution_score"]} for c in company_results]}}

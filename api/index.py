@@ -3,7 +3,7 @@
 import json
 from http.server import BaseHTTPRequestHandler
 
-from pricing_engine import PricingConfig, calculate_price
+from pricing_engine import PricingConfig, calculate_price, optimize_revenue_target, fetch_eea_scarcity
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -20,10 +20,20 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             inputs = json.loads(self.rfile.read(length))
             config_values = inputs.pop("config", {})
-            result = calculate_price(inputs, PricingConfig(**config_values))
+            result = (optimize_revenue_target(inputs, PricingConfig(**config_values))
+                      if inputs.get("mode") == "revenue_target" else calculate_price(inputs, PricingConfig(**config_values)))
             self._send(200, result)
         except (json.JSONDecodeError, TypeError, ValueError) as error:
             self._send(400, {"error": str(error)})
 
     def do_GET(self) -> None:  # noqa: N802
-        self._send(200, {"service": "water-pricing-engine", "status": "ok"})
+        from urllib.parse import parse_qs, urlparse
+        query = parse_qs(urlparse(self.path).query)
+        if "geography" in query:
+            try:
+                year = int(query["year"][0]) if "year" in query else None
+                self._send(200, fetch_eea_scarcity(query["geography"][0], year))
+            except (OSError, ValueError) as error:
+                self._send(400, {"error": str(error)})
+            return
+        self._send(200, {"service": "water-pricing-engine", "status": "ok", "scarcity_endpoint": "/api/?geography=Germany"})
