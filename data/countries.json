@@ -1,7 +1,7 @@
 [
   {
     "countryCode": "AL",
-    "countryName": "AL",
+    "countryName": "Albania",
     "publicWaterSupplyMioM3": 194.28,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 2.92,
@@ -14,7 +14,7 @@
   },
   {
     "countryCode": "AM",
-    "countryName": "AM",
+    "countryName": "Armenia",
     "publicWaterSupplyMioM3": null,
     "publicWaterSupplyYear": null,
     "manufacturingWaterMioM3": null,
@@ -40,7 +40,7 @@
   },
   {
     "countryCode": "AZ",
-    "countryName": "AZ",
+    "countryName": "Azerbaijan",
     "publicWaterSupplyMioM3": null,
     "publicWaterSupplyYear": null,
     "manufacturingWaterMioM3": null,
@@ -53,7 +53,7 @@
   },
   {
     "countryCode": "BA",
-    "countryName": "BA",
+    "countryName": "Bosnia and Herzegovina",
     "publicWaterSupplyMioM3": 345.26,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 50.2,
@@ -209,7 +209,7 @@
   },
   {
     "countryCode": "GE",
-    "countryName": "GE",
+    "countryName": "Georgia",
     "publicWaterSupplyMioM3": null,
     "publicWaterSupplyYear": null,
     "manufacturingWaterMioM3": null,
@@ -352,7 +352,7 @@
   },
   {
     "countryCode": "MD",
-    "countryName": "MD",
+    "countryName": "Moldova",
     "publicWaterSupplyMioM3": null,
     "publicWaterSupplyYear": null,
     "manufacturingWaterMioM3": null,
@@ -365,7 +365,7 @@
   },
   {
     "countryCode": "ME",
-    "countryName": "ME",
+    "countryName": "Montenegro",
     "publicWaterSupplyMioM3": 162.87,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 2.03,
@@ -378,7 +378,7 @@
   },
   {
     "countryCode": "MK",
-    "countryName": "MK",
+    "countryName": "North Macedonia",
     "publicWaterSupplyMioM3": 289.52,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 33.92,
@@ -469,7 +469,7 @@
   },
   {
     "countryCode": "RS",
-    "countryName": "RS",
+    "countryName": "Serbia",
     "publicWaterSupplyMioM3": 708.93,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 67.03,
@@ -521,7 +521,7 @@
   },
   {
     "countryCode": "TR",
-    "countryName": "TR",
+    "countryName": "Türkiye",
     "publicWaterSupplyMioM3": 7867.18,
     "publicWaterSupplyYear": 2024,
     "manufacturingWaterMioM3": 680.96,
@@ -534,7 +534,7 @@
   },
   {
     "countryCode": "UA",
-    "countryName": "UA",
+    "countryName": "Ukraine",
     "publicWaterSupplyMioM3": 1750.57,
     "publicWaterSupplyYear": 2023,
     "manufacturingWaterMioM3": 266.95,
