@@ -47,3 +47,8 @@ These questions aren't here to slow you down — they're part of what's being ev
 ## Our Approach
 
 *[To be filled in by the team at the end.]*
+
+## Vercel deployment
+
+The pricing engine is exposed as a Vercel serverless function at `/api/`.
+Deploy from the repository root with the Vercel CLI or by importing the repository into Vercel. A `GET /api/` health check returns service status; send pricing inputs as JSON to `POST /api/`. Optional multiplier assumptions can be supplied in a `config` object, matching `PricingConfig` in `pricing_engine.py`.
