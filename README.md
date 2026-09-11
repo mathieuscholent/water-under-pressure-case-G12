@@ -38,6 +38,10 @@ These questions aren't here to slow you down — they're part of what's being ev
 
 ## Our Approach
 
+### Business water pricing:
+
+Determine the optimal price to charge companies for water, with every recommendation grounded in what matters most: water scarcity and quality.
+
 ## Vercel deployment
 
 The pricing engine is exposed as a Vercel serverless function at `/api/`.
