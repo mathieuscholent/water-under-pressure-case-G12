@@ -1,0 +1,11 @@
+.shell{max-width:1440px!important;padding:24px 48px!important;min-height:100vh}
+.hero{margin:28px 0 24px!important;max-width:980px}
+.hero h1{font-size:clamp(46px,5.8vw,78px)!important;line-height:.94}
+.hero .intro{font-size:16px;max-width:900px}
+.layout{display:grid!important;grid-template-columns:minmax(380px,.9fr) minmax(520px,1.1fr);gap:22px;align-items:start}
+.country-step{max-width:none!important;margin:0!important}
+.map{height:clamp(300px,39vh,430px)!important}
+.selected-only{display:block!important}
+.country-step.has-selection .mapwrap,.country-step.has-selection .legend{display:block!important}
+@media(max-width:950px){.shell{padding:20px 24px!important}.layout{grid-template-columns:1fr}.map{height:390px!important}}
+@media(max-width:850px){.fields{grid-template-columns:1fr}}
