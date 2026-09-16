@@ -41,13 +41,18 @@ def _code(value: str) -> str:
     return {"EL": "GR", "UK": "GB"}.get(value, value)
 
 
+def _snapshot() -> list[dict]:
+    text = (ROOT / "data/countries.js").read_text(encoding="utf-8")
+    return json.loads(text.split("=", 1)[1].strip().rstrip(";"))
+
+
 def fetch_live_countries() -> tuple[list[dict], list[str]]:
     """Fetch current Eurostat observations; return records and source labels."""
     water_url = EUROSTAT + "env_wat_abs?lang=en&wat_proc=ABS_PWS&wat_proc=ABS_IND&wat_src=FRW&unit=MIO_M3"
     population_url = EUROSTAT + "demo_pjan?lang=en&unit=NR&age=TOTAL&sex=T&time=2023"
     water = _rows(_get_json(water_url))
     population = _rows(_get_json(population_url))
-    records = json.loads((ROOT / "data/countries.json").read_text(encoding="utf-8"))
+    records = _snapshot()
     by_code = {record["countryCode"]: record for record in records}
     for row in population:
         code = _code(row["geo"])
@@ -69,5 +74,4 @@ def live_country_payload() -> dict:
         countries, sources = fetch_live_countries()
         return {"countries": countries, "sources": sources, "live": True}
     except Exception as error:  # Public APIs can be unavailable or rate limited.
-        fallback = json.loads((ROOT / "data/countries.json").read_text(encoding="utf-8"))
-        return {"countries": fallback, "sources": ["data/countries.json snapshot"], "live": False, "warning": str(error)}
+        return {"countries": _snapshot(), "sources": ["data/countries.js snapshot"], "live": False, "warning": str(error)}
